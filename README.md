@@ -7,4 +7,4 @@ Small optimatisation to the code to make GPU, faster calculations and more plugi
 Licence
 =======
 
-Please see licence.gpl . All credit goes to the iFit development team.
+Please see COPYING . All credit goes to the iFit development team.
