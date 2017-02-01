@@ -170,10 +170,10 @@ res.cart.rlu2frame    = B;      % R2B
 res.cart.Q            = Q_B;    % Qcart = B*HKL
 res.cart.RM           = RM_B;   % this matrix is the resolution in the lattice frame, expressed in Angs-1
 res.cart.README       = '[B] cartesian lattice frame, ortho-normal, x=a*/|a*|';
-res.cart.unit         = '1/A';
+res.cart.unit         = Angs;
 res.cart.frame        = eye(3); % in Angs-1 along axes
 res.cart.frameUnit    = Angs;
-res.cart.frameStr     = {'a*/|a*|', [],[]};
+res.cart.frameStr     = {'a*/|a*|', ['b''*'],['c''*']};
 res.cart.Bragg        = rc_bragg(res.cart.RM);
 
 % [Q] basis
@@ -209,7 +209,7 @@ res.ABC.README        = '[U] cartesian rotated lattice frame, ortho-normal, x=A/
 res.ABC.unit          = Angs;
 res.ABC.frame         = U;      % in Angs-1 along axes
 res.ABC.frameUnit     = Angs;
-res.ABC.frameStr      = {'A/|A|',[],[]};
+res.ABC.frameStr      = {'A/|A|','B''','C=AxB'''};
 res.ABC.Bragg         = rc_bragg(res.ABC.RM);
 
 res.QM                = QM;

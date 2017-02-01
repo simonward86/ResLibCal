@@ -1,4 +1,4 @@
-function EXP = ResLibCal_Open(filename, EXP)
+function EXP = ResLibCal_Open(filename, EXP, silent)
 % EXP = ResLibCal_Open(filename): open an EXP/ResLib file and update main GUI
 %
 % Input:
@@ -14,7 +14,8 @@ function EXP = ResLibCal_Open(filename, EXP)
 
   if nargin < 1, filename = ''; end
   if nargin < 2, EXP = []; end
-  if isempty(filename) || isdir(filename)
+  if nargin < 3, silent = 0; end
+  if isempty(filename) || (ischar(filename) && isdir(filename))
     [filename, pathname] = uigetfile( ...
        {'*.m;*.ini',  'ResLibCal configuration M-file (*.m;*.ini)'; ...
         '*.cfg;*.par;*.res','ResCal/ResCal5 configuration (*.par;*.cfg;*.res)' ; ...
@@ -24,7 +25,7 @@ function EXP = ResLibCal_Open(filename, EXP)
     filename = fullfile(pathname, filename);
   end
 
-  if exist(filename,'file') % a file exists: read it
+  if ischar(filename) && exist(filename,'file') % a file exists: read it
     % handle case of ResCal5 .par .cfg file (numerical vector)
     try
       content = load(filename); % usually produces a vector of Rescal parameters (42 or 27)
@@ -61,17 +62,42 @@ function EXP = ResLibCal_Open(filename, EXP)
 
   % evaluate it to get 'EXP'
   if isstruct(EXP)
-    if exist('config','var') && isstruct(config) && isfield(config, 'Title')
-      titl = config.Title;
+    Position = [];
+    if exist('config','var') && isstruct(config) 
+      if isfield(config, 'Title')
+        titl = config.Title;
+      end
+      if isfield(config, 'Position')
+        Position = config.Position;
+      end
     end
     % send it to the figure
     try
       [fig, EXP] = ResLibCal_EXP2fig(EXP); % open figure if not yet done
+      % set position and size from last save (if available)
+      if ~isempty(Position) && isnumeric(Position) && ~isempty(fig)
+        if numel(Position) == 4
+          set(fig, 'Units','pixels','Position',Position);
+        elseif numel(Position) == 2 % size only
+          set(fig, 'Units','pixels');
+          p0 = get(fig,'Position');
+          Position(1:2) = p0(1:2);
+          set(fig, 'Position',Position);
+        end
+      end
       % force full update of all fields
       ResLibCal('update_d_tau_popup');
-      disp([ datestr(now) ': Loaded ' titl ' from ' filename ]);
+      if ~silent
+        if isstruct(filename)
+          disp([ datestr(now) ': Loaded ' titl ' from ' ]);
+          disp(filename)
+        else
+          disp([ datestr(now) ': Loaded ' titl ' from ' filename ]);
+        end
+      end
     catch
-      warning([ datestr(now) ': Could not load ResLibCal configuration ' filename ]);
+      warning([ datestr(now) ': Could not load ResLibCal configuration '  ]);
+      disp(filename)
       rethrow(lasterror)
     end
   end

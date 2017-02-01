@@ -7,7 +7,7 @@ function resolution = ResLibCal_RM2clouds(EXP, resolution)
 %   resolution: the resolution computation structure, for both [abc] and [xyz] frames
 %
 % Returns:
-%   resolution.rlu.cloud: cloud of points 4D axes as { H,K,L,W } in [ABC] frame
+%   resolution.rlu.cloud:  cloud of points 4D axes as { H,K,L,W } in [ABC] frame
 %   resolution.spec.cloud: cloud of points 4D axes as { H,K,L,W } in [xyz] frame
 
 % insprired from ResCal5/mc_conv
@@ -20,9 +20,14 @@ function resolution = ResLibCal_RM2clouds(EXP, resolution)
 NMC=get(ResLibCal_fig('View_NMC'), 'UserData');
 if     isfield(EXP, 'NMC'),         NMC=EXP.NMC;
 elseif isfield(resolution, 'NMC'),  NMC=resolution.NMC; end
-if isempty(NMC), NMC  = 2000; end
+if isempty(NMC), NMC  = 200; end
 
 %----- 
+
+if ~isempty(strfind(EXP.method, 'mcstas'))
+  resolution = ResLibCal_RM2clouds_mcstas(EXP, resolution);
+  return
+end
 
 % method: rescal5/rc_conv
 % this code is very compact and efficient, after re-factoring and testing 
@@ -31,7 +36,7 @@ if isempty(NMC), NMC  = 2000; end
 RMC = randn(4,NMC); % Monte Carlo points
 
 % [rlu] [R] frame: Resolution ellipsoid in terms of H,K,L,EN ([Rlu] & [meV])
-for frames={'rlu','spec'}  % others: 'cart','rlu_ABC','ABC'
+for frames={'rlu','spec','ABC','cart'}  % others: 'cart','rlu_ABC','ABC'
   frame = resolution.(frames{1});
   M=frame.RM;
   [V,E]=eig(M);

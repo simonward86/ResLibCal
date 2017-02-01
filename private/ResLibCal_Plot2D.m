@@ -1,16 +1,16 @@
-function out=ResLibCal_Plot2D(out, mode)
+function out=ResLibCal_Plot2D(out, modev)
 %
 % MATLAB function to plot the projections of the resolution ellipse
 % of a triple axis
 %
 % Input:
 %  out:  EXP ResLib structure 
-%  mode: can be set to 'rlu' so that the plot is in lattice RLU frame [abc] instead of [xyz]
+%  modev: can be set to 'rlu' so that the plot is in lattice RLU frame [abc] instead of [xyz]
 %        can also specify 'qz' to indicate x,y,z in place of x,y,E mode.
 
 % input parameters
 if nargin < 1, out = []; end
-if nargin < 2, mode=''; end
+if nargin < 2, modev=''; end
 if isempty(out), return; end
 
 if ~isfield(out, 'resolution') 
@@ -32,19 +32,23 @@ else
   resolutions = out.resolution;
 end
 
-max_points = ceil(max(100, 300/numel(resolutions))); % nb of MC points per cloud in 3 panes
+max_points = ceil(max(100, 1000/numel(resolutions))); % nb of MC points per cloud in 3 panes
 
 for index=1:numel(resolutions)
   resolution = resolutions{index};
   
-  if ~resolution.R0, continue; end
+  if ~isreal(resolution.R0) || ~resolution.R0, continue; end
   H=resolution.HKLE(1); K=resolution.HKLE(2); 
   L=resolution.HKLE(3); W=resolution.HKLE(4);
 
-  if ~isempty(strfind(mode,'rlu'))
+  if ~isempty(strfind(upper(modev),'RLU'))
     frame = resolution.rlu;
-  else
+  elseif ~isempty(strfind(upper(modev),'ABC'))
+    frame = resolution.ABC;
+  elseif ~isempty(strfind(upper(modev),'SPEC'))
     frame = resolution.spec;
+  elseif ~isempty(strfind(upper(modev),'LATTICE'))
+    frame = resolution.cart;
   end
   NP       = frame.RM;
   FrameStr = {frame.frameStr{:},'\omega meV'};
@@ -57,7 +61,7 @@ for index=1:numel(resolutions)
 
   if isempty(NP) || ~all(isreal(NP)), return; end
   
-  if isempty(strfind(mode,'cloud')), cloud=[]; end
+  if isempty(strfind(modev,'cloud')), cloud=[]; end
   
   % plot the 3 subplots for projections
   % each plot is shown as a gauss2d, contour.
@@ -71,26 +75,26 @@ for index=1:numel(resolutions)
   if index < numel(resolutions), hold on; else hold off; end
   % if numel(resolutions) > 1 && index==1, colorbar('North'); end
   
-  if ~isempty(strfind(mode,'qz'))
+  if ~isempty(strfind(modev,'qz'))
     [dummy, NP2] = rc_int(4,1, NP);
     [dummy, NP2] = rc_int(2,1, NP2);
-    ResLibCal_Proj_plot2D(2, 1,3, NP2, Labels, FrameStr, Units, 'xz', cloud, centre, max_points);  % xe
+    ResLibCal_Proj_plot2D(2, 1,3, NP2, Labels, FrameStr, Units, 'xz', cloud, centre, max_points);  % xz
     if index == 1, title('Vertical Q_z resolution'); end
     if index < numel(resolutions), hold on; else hold off; end
     
     [dummy, NP2] = rc_int(4,1, NP);
     [dummy, NP2] = rc_int(1,1, NP2);
-    ResLibCal_Proj_plot2D(3, 2,3, NP2, Labels, FrameStr, Units, 'yz', cloud, centre, max_points);  % ye
+    ResLibCal_Proj_plot2D(3, 2,3, NP2, Labels, FrameStr, Units, 'yz', cloud, centre, max_points);  % yz
   else
     [dummy, NP2] = rc_int(3,1, NP);
     [dummy, NP2] = rc_int(2,1, NP2);
-    ResLibCal_Proj_plot2D(2, 1,4, NP2, Labels, FrameStr, Units, 'xz', cloud, centre, max_points);  % xe
+    ResLibCal_Proj_plot2D(2, 1,4, NP2, Labels, FrameStr, Units, 'xe', cloud, centre, max_points);  % xe
     if index == 1, title('Energy resolution'); end
     if index < numel(resolutions), hold on; else hold off; end
     
     [dummy, NP2] = rc_int(3,1, NP);
     [dummy, NP2] = rc_int(1,1, NP2);
-    ResLibCal_Proj_plot2D(3, 2,4, NP2, Labels, FrameStr, Units, 'yz', cloud, centre, max_points);  % ye
+    ResLibCal_Proj_plot2D(3, 2,4, NP2, Labels, FrameStr, Units, 'ye', cloud, centre, max_points);  % ye
   end
   if index == 1, title(EXP.method); end
   if index < numel(resolutions), hold on; else hold off; end
@@ -100,7 +104,7 @@ hold off;
 
 % now add the text box
 % display a text edit uicontrol so that users can select/copy/paste
-[res, inst] = ResLibCal_FormatString(out, mode);
+[res, inst] = ResLibCal_FormatString(out, modev);
 message = [ res; inst ];
 
 % fill 4th sub-panel with uicontrol
@@ -164,7 +168,11 @@ function h=ResLibCal_Proj_plot2D(isub, ix,iy,NP, Labels, FrameStr, Units, panel_
     % contextual menu
     if isempty(findobj(gca, 'Tag',[ 'ResLibCal_Proj_Context_' panel_name ]))
       uicm = uicontextmenu;
-      uimenu(uicm, 'Label', [ 'ResLibCal: Resolution: Q' panel_name(1) 'Q' panel_name(2) ' projection' ]) ;
+      if panel_name(2) == 'e'
+        uimenu(uicm, 'Label', [ 'ResLibCal: Resolution: Q' panel_name(1) upper(panel_name(2)) ' projection' ]) ;
+      else
+        uimenu(uicm, 'Label', [ 'ResLibCal: Resolution: Q' panel_name(1) 'Q' panel_name(2) ' projection' ]) ;
+      end
       uimenu(uicm, 'Separator','on', 'Label', 'Duplicate View...', 'Callback', ...
          [ 'tmp_cb.g=gca;' ...
            'tmp_cb.f=figure; tmp_cb.c=copyobj(tmp_cb.g,gcf); ' ...
@@ -175,6 +183,9 @@ function h=ResLibCal_Proj_plot2D(isub, ix,iy,NP, Labels, FrameStr, Units, panel_
            'set(gca,''ZTickLabelMode'',''auto'',''ZTickMode'',''auto'');']);
       uimenu(uicm, 'Label','Toggle grid', 'Callback','grid');
       uimenu(uicm, 'Label','Reset View', 'Callback','view(2);alpha(0.5);axis tight;rotate3d off;');
+      if isub==1 || panel_name(2) ~= 'e'
+        uimenu(uicm, 'Label','Fix aspect Q ratio to 1', 'Callback','daspect([1 1 1])');
+      end
       uimenu(uicm, 'Separator','on','Label', 'About ResLibCal...', ...
         'Callback',[ 'msgbox(''' ResLibCal_version ''',''About ResLibCal'',''help'')' ]);
       set(gca, 'UIContextMenu', uicm, 'Tag',[ 'ResLibCal_Proj_Context_' panel_name ]);
